@@ -13,6 +13,8 @@ object Mooner {
     private var hasInit = false
     const val TAG = "mooner"
 
+    var invoker: (() -> Unit)? = null
+
     init {
         ByteHook.init(
             ByteHook.ConfigBuilder()
@@ -30,7 +32,8 @@ object Mooner {
         Log.e(TAG, "init state is $hasInit")
     }
 
-    fun initMooner(soName: String, signal: Int) {
+    fun initMooner(soName: String, signal: Int,invoker:()->Unit) {
+        this.invoker = invoker
         if (hasInit) {
             nativeMooner(soName, signal)
         } else {
@@ -42,6 +45,11 @@ object Mooner {
     @JvmStatic
     fun onError() {
         throw Exception("Mooner init error")
+    }
+
+    @JvmStatic
+    fun onHandleSignal() {
+        invoker?.invoke()
     }
 
     private external fun nativeMooner(soName: String, signal: Int)

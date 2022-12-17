@@ -2,6 +2,7 @@ package com.pika.mooner
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import com.pika.mooner.databinding.ActivityMainBinding
 import com.pika.mooner_core.Mooner
 
@@ -21,7 +22,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fixText.setOnClickListener {
-            Mooner.initMooner("libmooner.so",11)
+            Mooner.initMooner("libmooner.so",11){
+                Log.e("mooner","catch exception")
+            }
         }
     }
 
