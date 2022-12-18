@@ -1,5 +1,5 @@
 # mooner
-捕获 Android 基于“pthread_create” 产生的子线程中异常业务逻辑产生信号，导致引起的native crash
+捕获 Android 基于“pthread_create” 产生的子线程中异常业务逻辑产生信号，导致的native crash
 ## 详细介绍
 
 
