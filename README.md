@@ -1,7 +1,14 @@
 # mooner
 捕获 Android 基于“pthread_create” 产生的子线程中异常业务逻辑产生信号，导致的native crash
-## 详细介绍
+## 捕获范围
+1.由pthread_create 创建的线程中，执行的异常业务逻辑
 
+2.捕获sigaction所支持的信号
+
+3.监听信号时采用的是回溯处理，因此不像java 层try catch一样，而是将本次操作“清除”，如果业务强依赖这次操作，请做好开关降级处理
+
+## 详细介绍
+https://juejin.cn/post/7178341941480783931/
 
 ## 使用说明
 已发布到mavencenter仓库
