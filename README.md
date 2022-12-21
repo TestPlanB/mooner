@@ -14,10 +14,9 @@ https://juejin.cn/post/7178341941480783931/
 已发布到mavencenter仓库
 gradle 导入
 ```
-todo
+implementation 'io.github.TestPlanB:mooner:1.0.0'
 ```
 ### 使用
-该项目可以用于本地配置使用，只需拷贝mooner-core这个module到自己的项目即可，请按照以下条件使用
 
 使用方式非常简单：
 
