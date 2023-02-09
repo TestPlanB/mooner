@@ -136,7 +136,8 @@ Java_com_pika_mooner_1core_Mooner_nativeMooner(JNIEnv *env, jobject thiz, jstrin
         struct sigaction sigc;
         sigc.sa_sigaction = sig_handler;
         sigemptyset(&sigc.sa_mask);
-        sigc.sa_flags = SA_SIGINFO | SA_ONSTACK;
+        // 推荐采用SA_RESTART 虽然不是所有系统调用都支持，被中断后重新启动，但是能覆盖大部分
+        sigc.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_RESTART;
         int flag = sigaction(signal, &sigc, &old);
         if (flag == -1) {
             handle_exception(env);
