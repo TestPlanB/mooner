@@ -1,6 +1,10 @@
 # mooner
-捕获 Android 基于“pthread_create” 产生的子线程中异常业务逻辑产生信号，导致的native crash
-## 捕获范围
+mooner 是一系列疑难native crash解决手段与黑科技实践的集合体，现包括以下功能：
+
+功能1. 捕获 Android 基于“pthread_create” 产生的子线程中异常业务逻辑产生信号，导致的native crash
+
+功能2. 突破Java虚拟机堆大小限制，实现LargeObjectSpace的内存隐藏
+## 功能1 捕获范围
 1.由pthread_create 创建的线程中，执行的异常业务逻辑
 
 2.捕获sigaction所支持的信号
@@ -8,15 +12,18 @@
 3.监听信号时采用的是回溯处理，因此不像java 层try catch一样，而是将本次操作“清除”，如果业务强依赖这次操作，请做好开关降级处理
 
 ## 详细介绍
-https://juejin.cn/post/7178341941480783931/
+功能1：https://juejin.cn/post/7178341941480783931/
+
+功能2:待补充
 
 ## 使用说明
 已发布到mavencenter仓库
 gradle 导入
 ```
+待更新 
 implementation 'io.github.TestPlanB:mooner:1.0.0'
 ```
-### 使用
+### 功能1使用
 
 使用方式非常简单：
 
@@ -31,6 +38,16 @@ implementation 'io.github.TestPlanB:mooner:1.0.0'
 Mooner.initMooner("libmooner.so",11){
                 Log.e("mooner","catch exception")
             }
+
+```
+
+### 功能2使用
+
+
+合适的时候调用以下即可实现堆内存限制突破
+
+```
+ Mooner.initMSponge()
 
 ```
 
