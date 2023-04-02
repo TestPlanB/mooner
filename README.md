@@ -11,6 +11,9 @@ mooner 是一系列疑难native crash解决手段与黑科技实践的集合体�
 
 3.监听信号时采用的是回溯处理，因此不像java 层try catch一样，而是将本次操作“清除”，如果业务强依赖这次操作，请做好开关降级处理
 
+## 功能2 生效范围
+隐藏LargeObjectSpace的内存使用（FreeListSpace），提高堆内存的上限，提升大小为当前（FreeListSpace的使用内存大小）
+
 ## 详细介绍
 功能1：https://juejin.cn/post/7178341941480783931/
 
