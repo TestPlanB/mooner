@@ -14,11 +14,17 @@ add_library(
 
         SHARED
 
-        core.c)
+        prevent_pthread_crash.c
+        jni_init.c
+        mooner_exception.c
+        msponge.c
+)
 find_package(bytehook REQUIRED CONFIG)
 
 target_link_libraries(mooner_core bytehook::bytehook)
+find_package(shadowhook REQUIRED CONFIG)
 
+target_link_libraries(mooner_core shadowhook::shadowhook)
 
 find_library(
         log-lib

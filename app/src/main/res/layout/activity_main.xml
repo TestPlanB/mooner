@@ -25,4 +25,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/crash_text"/>
 
+
+    <Button
+        android:id="@+id/oom_alloc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="分配一个大对象"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/fix_text"/>
+
+
+    <Button
+        android:id="@+id/msponge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="msponge方案"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/oom_alloc"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

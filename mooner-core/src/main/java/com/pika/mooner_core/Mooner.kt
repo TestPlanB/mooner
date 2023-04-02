@@ -2,8 +2,11 @@ package com.pika.mooner_core
 
 import android.util.Log
 import androidx.annotation.Keep
-import com.bytedance.android.bytehook.BuildConfig
 import com.bytedance.android.bytehook.ByteHook
+import com.bytedance.shadowhook.ShadowHook
+
+
+
 
 
 // @author: pika
@@ -22,6 +25,13 @@ object Mooner {
                 .setDebug(false)
                 .build()
         )
+
+        ShadowHook.init(
+            ShadowHook.ConfigBuilder()
+                .setMode(ShadowHook.Mode.UNIQUE)
+                .build()
+        )
+
         try {
             System.loadLibrary("mooner_core")
             hasInit = true
@@ -32,10 +42,10 @@ object Mooner {
         Log.e(TAG, "init state is $hasInit")
     }
 
-    fun initMooner(soName: String, signal: Int,invoker:()->Unit) {
+    fun initPreventPthreadCrash(soName: String, signal: Int, invoker:()->Unit) {
         this.invoker = invoker
         if (hasInit) {
-            nativeMooner(soName, signal)
+            preventPthreadCrash(soName, signal)
         } else {
             Log.e(TAG, "init fail")
         }
@@ -52,6 +62,9 @@ object Mooner {
         invoker?.invoke()
     }
 
-    private external fun nativeMooner(soName: String, signal: Int)
+
+    private external fun preventPthreadCrash(soName: String, signal: Int)
+
+    external fun memorySponge()
 
 }

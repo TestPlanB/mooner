@@ -10,11 +10,11 @@
 #include <unistd.h>
 #include <setjmp.h>
 #include "bytehook.h"
+#include "jni_init.h"
+#include "mooner_exception.h"
 
 
-#define HACKER_JNI_CLASS_NAME "com/pika/mooner_core/Mooner"
-#define HACKER_JNI_VERSION JNI_VERSION_1_6
-#define HACKER_JNI_ERROR_HANDLER "onError"
+
 #define HACKER_JNI_HANDLER "onHandleSignal"
 #define SIGNAL_CRASH_STACK_SIZE (1024 * 128)
 #define TAG "mooner"
@@ -22,10 +22,7 @@
 
 static sigjmp_buf sig_env;
 static volatile int handleFlag = 0;
-static JavaVM *currentVm = NULL;
 static JNIEnv *currentEnv;
-static jclass callBackClass;
-
 static struct sigaction old;
 
 // 原本线程参数
@@ -45,8 +42,8 @@ static void *pthread(void *arg) {
         vmAttachArgs.group = NULL;
         jint attachRet = (*currentVm)->AttachCurrentThread(currentVm, (JNIEnv **) &currentEnv, &vmAttachArgs);
         // 现在处于native子线程，默认是booster加载器
-        jmethodID id = (*currentEnv)->GetStaticMethodID(currentEnv, callBackClass,HACKER_JNI_HANDLER, "()V");
-        (*currentEnv)->CallStaticVoidMethod(currentEnv, callBackClass, id);
+        jmethodID id = (*currentEnv)->GetStaticMethodID(currentEnv, callClass,HACKER_JNI_HANDLER, "()V");
+        (*currentEnv)->CallStaticVoidMethod(currentEnv, callClass, id);
     } else {
         temp->current_func(temp->current_arg);
     }
@@ -81,39 +78,13 @@ static void sig_handler(int sig, struct siginfo *info, void *ptr) {
 }
 
 
-void handle_exception(JNIEnv *env) {
-    // 异常处理
-    jclass main = (*env)->FindClass(env, HACKER_JNI_CLASS_NAME);
-    jmethodID id = (*env)->GetStaticMethodID(env, main, HACKER_JNI_ERROR_HANDLER, "()V");
-    (*env)->CallStaticVoidMethod(env, main, id);
-}
 
-JNIEXPORT jint
-JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
-    currentVm = vm;
-    return HACKER_JNI_VERSION;
-}
-
-
-
-JNIEXPORT void JNICALL JNI_OnUnLoad(JavaVM* jvm, void* reserved)
-{
-    JNIEnv* env;
-    if ((*jvm)->GetEnv(jvm,(void**) &env, HACKER_JNI_VERSION) != JNI_OK) {
-        return;
-    }
-
-    if (callBackClass != NULL) {
-        (*env)->DeleteWeakGlobalRef(env,callBackClass);
-        callBackClass = NULL;
-    }
-}
 
 JNIEXPORT void JNICALL
-Java_com_pika_mooner_1core_Mooner_nativeMooner(JNIEnv *env, jobject thiz, jstring so_name,
+Java_com_pika_mooner_1core_Mooner_preventPthreadCrash(JNIEnv *env, jobject thiz, jstring so_name,
                                                jint signal) {
     jclass clazz = (*env)->FindClass(env,HACKER_JNI_CLASS_NAME);
-    callBackClass= (*env)->NewGlobalRef(env,clazz);
+    callClass= (*env)->NewGlobalRef(env,clazz);
 
 
     void *open_proxy;

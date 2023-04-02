@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 rootProject.name = "mooner"
 include ':app'
 include ':mooner-core'
+
