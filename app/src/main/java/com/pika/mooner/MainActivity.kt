@@ -32,6 +32,8 @@ class MainActivity : AppCompatActivity() {
 
         // msponge 突破虚拟机堆大小限制
         binding.oomAlloc.setOnClickListener {
+            // 模拟无用大对象，方便模拟gc的情况
+            LargeObjectTest()
             list.add(LargeObjectTest())
         }
 

@@ -12,29 +12,46 @@ uint64_t allocLOS;
 int64_t lastAllocLOS;
 void *grow_for_utilization_orig = NULL;
 
+void* los = NULL;
+
 
 bool sForceAllocateInternalWithGc = false;
 bool sFindThrowOutOfMemoryError = false;
+
+uint64_t get_num_bytes_allocated(void * los){
+    void *handle = shadowhook_dlopen("libart.so");
+    void *func = shadowhook_dlsym(handle,
+                                  "_ZN3art2gc5space16LargeObjectSpace17GetBytesAllocatedEv");
+    uint64_t num_bytes_allocated = ((int (*)(void *)) func)(los);
+    __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%lu", "num_bytes_allocated ->",
+                        num_bytes_allocated);
+    return num_bytes_allocated;
+}
 
 
 void *los_alloc_proxy(void *thiz, void *self, size_t num_bytes, size_t *bytes_allocated,
                       size_t *usable_size,
                       size_t *bytes_tl_bulk_allocated) {
-    void *handle = shadowhook_dlopen("libart.so");
-    void *func = shadowhook_dlsym(handle,
-                                  "_ZN3art2gc5space16LargeObjectSpace17GetBytesAllocatedEv");
-    uint64_t num_bytes_allocated = ((int (*)(void *)) func)(thiz);
-    allocLOS = num_bytes_allocated;
-    __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%lu", "num_bytes_allocated ->",
-                        num_bytes_allocated);
+
+    allocLOS = get_num_bytes_allocated(thiz);
+
     void *largeObjectMap = ((los_alloc) los_alloc_orig)(thiz, self, num_bytes, bytes_allocated,
                                                         usable_size,
                                                         bytes_tl_bulk_allocated);
+    los = thiz;
     return largeObjectMap;
 }
 
+void call_record_free(void * heap,int64_t freeSize){
+    //拦截并跳过本次OutOfMemory，并置标记位
+    void *handle = shadowhook_dlopen("libart.so");
+    void *func = shadowhook_dlsym(handle, "_ZN3art2gc4Heap10RecordFreeEml");
+    ((void (*)(void *, uint64_t, int64_t)) func)(heap, -1, freeSize);
+}
 
-void *allocate_internal_with_gc_proxy(void *head, void *self,
+
+
+void *allocate_internal_with_gc_proxy(void *heap, void *self,
                                       enum AllocatorType allocator,
                                       bool instrumented,
                                       size_t alloc_size,
@@ -44,7 +61,7 @@ void *allocate_internal_with_gc_proxy(void *head, void *self,
                                       void *klass) {
     __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "gc 后分配");
     sForceAllocateInternalWithGc = false;
-    void *object = ((alloc_internal_with_gc_type) alloc_internal_with_gc_orig)(head, self,
+    void *object = ((alloc_internal_with_gc_type) alloc_internal_with_gc_orig)(heap, self,
                                                                                allocator,
                                                                                instrumented,
                                                                                alloc_size,
@@ -58,17 +75,28 @@ void *allocate_internal_with_gc_proxy(void *head, void *self,
         // 证明oom后系统进行gc依旧没能找到合适的内存，所以要尝试进行堆清除
         __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "分配内存不足，采取堆清除策略");
         sForceAllocateInternalWithGc = true;
-        object = ((alloc_internal_with_gc_type) alloc_internal_with_gc_orig)(head, self, allocator,
+        object = ((alloc_internal_with_gc_type) alloc_internal_with_gc_orig)(heap, self, allocator,
                                                                              instrumented,
                                                                              alloc_size,
                                                                              bytes_allocated,
                                                                              usable_size,
                                                                              bytes_tl_bulk_allocated,
                                                                              klass);
+        // 如果当前heap 通过gc后释放了属于largeobjectspace 的空间，此时要进行heap补偿
+        if (los != NULL){
+            uint64_t currentAllocLOS = get_num_bytes_allocated(los);
+            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu : %lu", "当前数值",currentAllocLOS, allocLOS);
+            if (currentAllocLOS < allocLOS){
+                call_record_free(heap,currentAllocLOS - allocLOS);
+                __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu", "los进行补偿",currentAllocLOS - allocLOS);
+            }
+        }
+
         sForceAllocateInternalWithGc = false;
     }
     return object;
 }
+
 
 
 void throw_out_of_memory_error_proxy(void *heap, void *self, size_t byte_count,
@@ -79,12 +107,10 @@ void throw_out_of_memory_error_proxy(void *heap, void *self, size_t byte_count,
     // 如果当前不是清除堆空间后再引发的oom，则进行堆清除，否则直接oom
     if (!sForceAllocateInternalWithGc) {
         __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "发生了oom，进行gc拦截");
-        //拦截并跳过本次OutOfMemory，并置标记位
-        void *handle = shadowhook_dlopen("libart.so");
-        void *func = shadowhook_dlsym(handle, "_ZN3art2gc4Heap10RecordFreeEml");
+
 
         if (allocLOS > lastAllocLOS){
-            ((void (*)(void *, uint64_t, int64_t)) func)(heap, -1, allocLOS - lastAllocLOS);
+            call_record_free(heap,allocLOS - lastAllocLOS);
             __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d", "本次增量:",lastAllocLOS - allocLOS);
             lastAllocLOS = allocLOS;
         }

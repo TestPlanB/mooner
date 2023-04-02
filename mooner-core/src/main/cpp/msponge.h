@@ -35,7 +35,7 @@ void *los_alloc_proxy(void *thiz, void *self, size_t num_bytes, size_t *bytes_al
                       size_t *bytes_tl_bulk_allocated);
 
 
-void *allocate_internal_with_gc_proxy(void *head, void *self,
+void *allocate_internal_with_gc_proxy(void *heap, void *self,
                                       enum AllocatorType allocator,
                                       bool instrumented,
                                       size_t alloc_size,
@@ -49,3 +49,8 @@ void throw_out_of_memory_error_proxy(void *heap, void *self, size_t byte_count,
 
 void
 grow_for_utilization_proxy(void *heap, void *collector_ran, uint64_t bytes_allocated_before_gc);
+
+
+uint64_t get_num_bytes_allocated(void *);
+
+void call_record_free(void *,int64_t);
