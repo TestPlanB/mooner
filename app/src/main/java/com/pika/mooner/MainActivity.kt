@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.msponge.setOnClickListener {
-            Mooner.memorySponge()
+            Mooner.initMSponge()
         }
     }
 

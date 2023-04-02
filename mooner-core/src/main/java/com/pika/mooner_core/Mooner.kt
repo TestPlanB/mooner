@@ -62,9 +62,15 @@ object Mooner {
         invoker?.invoke()
     }
 
+    fun initMSponge(){
+        if (hasInit) {
+           memorySponge()
+        }
+    }
+
 
     private external fun preventPthreadCrash(soName: String, signal: Int)
 
-    external fun memorySponge()
+    private external fun memorySponge()
 
 }
