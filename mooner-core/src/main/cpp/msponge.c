@@ -2,13 +2,13 @@
 #include <android/log.h>
 #include <shadowhook.h>
 #include "msponge.h"
+#include "threads.h"
 
 
 void *los_alloc_orig = NULL;
 void *alloc_internal_with_gc_orig = NULL;
 void *throw_out_of_memory_error_orig = NULL;
 void *stub = NULL;
-uint64_t allocLOS;
 int64_t lastAllocLOS;
 void *grow_for_utilization_orig = NULL;
 
@@ -32,8 +32,6 @@ uint64_t get_num_bytes_allocated(void * los){
 void *los_alloc_proxy(void *thiz, void *self, size_t num_bytes, size_t *bytes_allocated,
                       size_t *usable_size,
                       size_t *bytes_tl_bulk_allocated) {
-
-    allocLOS = get_num_bytes_allocated(thiz);
 
     void *largeObjectMap = ((los_alloc) los_alloc_orig)(thiz, self, num_bytes, bytes_allocated,
                                                         usable_size,
@@ -85,10 +83,10 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
         // 如果当前heap 通过gc后释放了属于largeobjectspace 的空间，此时要进行heap补偿
         if (los != NULL){
             uint64_t currentAllocLOS = get_num_bytes_allocated(los);
-            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu : %lu", "当前数值",currentAllocLOS, allocLOS);
-            if (currentAllocLOS < allocLOS){
-                call_record_free(heap,currentAllocLOS - allocLOS);
-                __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu", "los进行补偿",currentAllocLOS - allocLOS);
+            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu : %lu", "当前数值",currentAllocLOS, lastAllocLOS);
+            if (currentAllocLOS < lastAllocLOS){
+                call_record_free(heap,currentAllocLOS - lastAllocLOS);
+                __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu", "los进行补偿",currentAllocLOS - lastAllocLOS);
             }
         }
 
@@ -101,19 +99,23 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
 
 void throw_out_of_memory_error_proxy(void *heap, void *self, size_t byte_count,
                                      enum AllocatorType allocator_type) {
-    __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "发生了oom");
+    __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d,%d", "发生了oom ",pthread_gettid_np(pthread_self()),sForceAllocateInternalWithGc);
     // 发生了oom，把oom的标志位设置为true
     sFindThrowOutOfMemoryError = true;
     // 如果当前不是清除堆空间后再引发的oom，则进行堆清除，否则直接oom
     if (!sForceAllocateInternalWithGc) {
         __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "发生了oom，进行gc拦截");
 
-
-        if (allocLOS > lastAllocLOS){
-            call_record_free(heap,allocLOS - lastAllocLOS);
-            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d", "本次增量:",lastAllocLOS - allocLOS);
-            lastAllocLOS = allocLOS;
+        if (los != NULL){
+            uint64_t currentAlloc = get_num_bytes_allocated(los);
+            if (currentAlloc > lastAllocLOS){
+                call_record_free(heap,currentAlloc - lastAllocLOS);
+                __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d", "本次增量:",currentAlloc - lastAllocLOS);
+                lastAllocLOS = currentAlloc;
+            }
         }
+
+
         return;
     }
     //如果不允许拦截，则直接调用原函数，抛出OOM异常
