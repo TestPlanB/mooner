@@ -47,7 +47,7 @@ Mooner.initMooner("libmooner.so",11){
 ### 功能2使用
 
 
-合适的时候调用以下即可实现堆内存限制突破
+合适的时候调用以下即可实现堆内存限制突破（只是初始化），会在OOM的时候生效
 
 ```
  Mooner.initMSponge()
