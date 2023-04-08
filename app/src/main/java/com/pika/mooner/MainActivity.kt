@@ -1,7 +1,5 @@
 package com.pika.mooner
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -11,7 +9,10 @@ import com.pika.mooner_core.Mooner
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    val list = ArrayList<LargeObjectTest>()
+    private val bigObject = ArrayList<LargeObjectTest>()
+    private val normalObject = ArrayList<SmallObjectTest>()
+    private var bigObjectClickTime = 0
+    private var normalObjectClickTime = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,16 +26,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fixText.setOnClickListener {
-            Mooner.initPreventPthreadCrash("libmooner.so",11){
-                Log.e("mooner","catch exception")
+            Mooner.initPreventPthreadCrash("libmooner.so", 11) {
+                Log.e("mooner", "catch exception")
             }
         }
 
-        // msponge 突破虚拟机堆大小限制
+        // msponge 突破虚拟机堆大小限制 这里可以根据自己的手机，模拟点击几次，对比开启方案后的效果
         binding.oomAlloc.setOnClickListener {
-            // 模拟无用大对象，方便模拟gc的情况
-            LargeObjectTest()
-            list.add(LargeObjectTest())
+            bigObject.add(LargeObjectTest())
+            bigObjectClickTime++
+            binding.oomAlloc.text = "大对象分配了 $bigObjectClickTime 次"
+        }
+
+        binding.oomAllocSmall.setOnClickListener {
+            normalObject.add(SmallObjectTest())
+            normalObjectClickTime++
+            binding.oomAllocSmall.text = "普通对象分配了 $normalObjectClickTime 次"
         }
 
         binding.msponge.setOnClickListener {

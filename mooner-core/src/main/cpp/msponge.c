@@ -9,14 +9,14 @@ void *los_alloc_orig = NULL;
 void *alloc_internal_with_gc_orig = NULL;
 void *throw_out_of_memory_error_orig = NULL;
 void *stub = NULL;
-int64_t lastAllocLOS;
+int64_t lastAllocLOS = 0;
 void *grow_for_utilization_orig = NULL;
 
 void* los = NULL;
 
 
-bool sForceAllocateInternalWithGc = false;
-bool sFindThrowOutOfMemoryError = false;
+bool tryAgainAllocateInternalWithGc = false;
+bool findThrowOutOfMemoryError = false;
 
 uint64_t get_num_bytes_allocated(void * los){
     void *handle = shadowhook_dlopen("libart.so");
@@ -58,7 +58,7 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
                                       size_t *bytes_tl_bulk_allocated,
                                       void *klass) {
     __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "gc 后分配");
-    sForceAllocateInternalWithGc = false;
+    tryAgainAllocateInternalWithGc = false;
     void *object = ((alloc_internal_with_gc_type) alloc_internal_with_gc_orig)(heap, self,
                                                                                allocator,
                                                                                instrumented,
@@ -69,10 +69,10 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
                                                                                klass);
 
     // 分配内存为null，且发生了oom
-    if (object == NULL && sFindThrowOutOfMemoryError) {
+    if (object == NULL && findThrowOutOfMemoryError) {
         // 证明oom后系统进行gc依旧没能找到合适的内存，所以要尝试进行堆清除
         __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "分配内存不足，采取堆清除策略");
-        sForceAllocateInternalWithGc = true;
+        tryAgainAllocateInternalWithGc = true;
         object = ((alloc_internal_with_gc_type) alloc_internal_with_gc_orig)(heap, self, allocator,
                                                                              instrumented,
                                                                              alloc_size,
@@ -80,6 +80,11 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
                                                                              usable_size,
                                                                              bytes_tl_bulk_allocated,
                                                                              klass);
+        // 再次重试后，依旧找不到合适的内存，就直接return，走原来的oom逻辑
+        if (object == NULL){
+            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "再次分配依旧找不到合适内存 return ");
+            return object;
+        }
         // 如果当前heap 通过gc后释放了属于largeobjectspace 的空间，此时要进行heap补偿
         if (los != NULL){
             uint64_t currentAllocLOS = get_num_bytes_allocated(los);
@@ -90,7 +95,7 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
             }
         }
 
-        sForceAllocateInternalWithGc = false;
+        tryAgainAllocateInternalWithGc = false;
     }
     return object;
 }
@@ -99,27 +104,31 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
 
 void throw_out_of_memory_error_proxy(void *heap, void *self, size_t byte_count,
                                      enum AllocatorType allocator_type) {
-    __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d,%d", "发生了oom ",pthread_gettid_np(pthread_self()),sForceAllocateInternalWithGc);
+    __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d,%d", "发生了oom ", pthread_gettid_np(pthread_self()), tryAgainAllocateInternalWithGc);
     // 发生了oom，把oom的标志位设置为true
-    sFindThrowOutOfMemoryError = true;
+    findThrowOutOfMemoryError = true;
     // 如果当前不是清除堆空间后再引发的oom，则进行堆清除，否则直接oom
-    if (!sForceAllocateInternalWithGc) {
+    if (!tryAgainAllocateInternalWithGc) {
         __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "发生了oom，进行gc拦截");
 
         if (los != NULL){
             uint64_t currentAlloc = get_num_bytes_allocated(los);
+            // 需要考虑多次触发oom的情况，如果当前进行了堆删减，才会进行补偿，否则要把lastAllocLOS设置为0避免产生大额补偿
             if (currentAlloc > lastAllocLOS){
                 call_record_free(heap,currentAlloc - lastAllocLOS);
                 __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d", "本次增量:",currentAlloc - lastAllocLOS);
                 lastAllocLOS = currentAlloc;
+                return;
+            } else{
+                lastAllocLOS = 0;
             }
         }
 
-
-        return;
     }
     //如果不允许拦截，则直接调用原函数，抛出OOM异常
     __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "oom拦截失效");
+    // 这里要设置成fasle，因为throw_out_of_memory_error方法会多次再尝试gc，避免多次走到重新尝试分配流程
+    findThrowOutOfMemoryError = false;
     ((out_of_memory) throw_out_of_memory_error_orig)(heap, self, byte_count, allocator_type);
 }
 

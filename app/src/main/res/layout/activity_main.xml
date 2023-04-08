@@ -35,6 +35,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/fix_text"/>
 
+    <Button
+        android:id="@+id/oom_alloc_small"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="分配多个小对象"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/oom_alloc"/>
+
 
     <Button
         android:id="@+id/msponge"
@@ -43,6 +52,6 @@
         android:text="msponge方案"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/oom_alloc"/>
+        app:layout_constraintTop_toBottomOf="@+id/oom_alloc_small"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
