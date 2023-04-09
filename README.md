@@ -3,7 +3,7 @@ mooner 是一系列疑难native crash解决手段与黑科技实践的集合体�
 
 功能1. 捕获 Android 基于“pthread_create” 产生的子线程中异常业务逻辑产生信号，导致的native crash
 
-功能2. 突破Java虚拟机堆大小限制，实现LargeObjectSpace的内存隐藏
+功能2. 突破Java虚拟机堆大小限制，实现LargeObjectSpace的内存隐藏，仅在OOM发生时生效，最小力度的影响
 ## 功能1 捕获范围
 1.由pthread_create 创建的线程中，执行的异常业务逻辑
 
@@ -15,7 +15,7 @@ mooner 是一系列疑难native crash解决手段与黑科技实践的集合体�
 隐藏LargeObjectSpace的内存使用（FreeListSpace），提高堆内存的上限，提升大小为当前（FreeListSpace的使用内存大小），且只在OOM时生效，挽救OOM
 
 ## 详细介绍
-功能1：https://juejin.cn/post/7178341941480783931/
+功能1: https://juejin.cn/post/7178341941480783931/
 
 功能2: https://juejin.cn/post/7218379300505059365
 
