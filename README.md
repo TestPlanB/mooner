@@ -31,9 +31,8 @@ https://user-images.githubusercontent.com/65278264/231100416-deb94fdd-8a46-493f-
 
 ## 使用说明
 已发布到mavencenter仓库
-gradle 导入
+gradle 导入 已包含全部功能
 ```
-已包含全部功能
 implementation 'io.github.TestPlanB:mooner:2.0.2'
 ```
 ### 功能1使用
