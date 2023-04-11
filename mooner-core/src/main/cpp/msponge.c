@@ -171,7 +171,7 @@ Java_com_pika_mooner_1core_Mooner_memorySponge(JNIEnv *env, jobject thiz) {
 
     int error_num = shadowhook_get_errno();
     const char *error_msg1 = shadowhook_to_errmsg(error_num);
-    __android_log_print(ANDROID_LOG_WARN, MSPONGE_TAG, "hook return: %p, %d - %s", stub, error_num,
+    __android_log_print(ANDROID_LOG_WARN, MSPONGE_TAG, "hook return: %d - %s", error_num,
                         error_msg1);
 
 
