@@ -21,7 +21,7 @@ https://user-images.githubusercontent.com/65278264/231100416-deb94fdd-8a46-493f-
 
 3.监听信号时采用的是回溯处理，因此不像java 层try catch一样，而是将本次操作“清除”，如果业务强依赖这次操作，请做好开关降级处理
 
-## 功能2 生效范围
+## 功能2 生效范围[目前作者用的是android11 手机，其他版本待todo适配，主要以学习为主，线上需要做好测试兼容]
 隐藏LargeObjectSpace的内存使用（FreeListSpace），提高堆内存的上限，提升大小为当前（FreeListSpace的使用内存大小），且只在OOM时生效，挽救OOM
 
 ## 详细介绍
