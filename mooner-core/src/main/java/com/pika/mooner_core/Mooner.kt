@@ -68,6 +68,14 @@ object Mooner {
         }
     }
 
+    fun startMutexMonitor(hookSoNmae:String){
+        if (hasInit) {
+            mutexMonitor(hookSoNmae)
+        }
+    }
+
+    private external fun mutexMonitor(hookSoNmae:String)
+
 
     private external fun preventPthreadCrash(soName: String, signal: Int)
 

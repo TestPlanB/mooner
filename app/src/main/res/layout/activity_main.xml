@@ -11,7 +11,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="create crash"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -54,4 +53,12 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/oom_alloc_small"/>
 
+    <Button
+        android:id="@+id/destroyed_mutex_monitor"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="监控destroyed mutex"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/oom_alloc_small"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

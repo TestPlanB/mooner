@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         minSdk 23
-        targetSdk 29
+        targetSdk 30
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -58,5 +58,6 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.5.0'
     implementation 'com.bytedance:bytehook:1.0.6'
     implementation 'com.bytedance.android:shadowhook:1.0.6'
+    implementation 'io.github.hexhacking:xunwind:2.0.0'
 
 }

@@ -18,11 +18,18 @@ add_library(
         jni_init.c
         mooner_exception.c
         msponge.c
+        check_is_destroy_mutex.cpp
+        concurrent_hash_map_gap.c
+        pthread_mutex_use_after_destroy.c
 )
 find_package(bytehook REQUIRED CONFIG)
 
 target_link_libraries(mooner_core bytehook::bytehook)
 find_package(shadowhook REQUIRED CONFIG)
+
+
+find_package(xunwind REQUIRED CONFIG)
+target_link_libraries(mooner_core xunwind::xunwind)
 
 target_link_libraries(mooner_core shadowhook::shadowhook)
 

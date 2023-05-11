@@ -12,6 +12,7 @@ mooner 是一系列疑难native crash解决手段与黑科技实践的集合体�
 https://user-images.githubusercontent.com/65278264/231100416-deb94fdd-8a46-493f-a0fd-ca338ea8abc2.mp4
 
 
+功能3. 用于排查pthread_mutex释放后使用的情况，当发生释放后使用时，会打印释放时的堆栈信息
 
 
 ## 功能1 捕获范围
@@ -21,8 +22,11 @@ https://user-images.githubusercontent.com/65278264/231100416-deb94fdd-8a46-493f-
 
 3.监听信号时采用的是回溯处理，因此不像java 层try catch一样，而是将本次操作“清除”，如果业务强依赖这次操作，请做好开关降级处理
 
-## 功能2 生效范围
+## 功能2 生效范围[目前作者用的是android11 手机，其他版本待todo适配，主要以学习为主，线上需要做好测试兼容]
 隐藏LargeObjectSpace的内存使用（FreeListSpace），提高堆内存的上限，提升大小为当前（FreeListSpace的使用内存大小），且只在OOM时生效，挽救OOM
+
+## 功能3 pthread_mutex 释放跟踪
+当出现锁释放后使用时，给出释放时的堆栈信息，用于异常排查
 
 ## 详细介绍
 功能1: https://juejin.cn/post/7178341941480783931/
@@ -65,7 +69,11 @@ Mooner.initMooner("libmooner.so",11){
 
 ```
 
-
+### 功能3使用
+参数1 是需要监控的so名称，此时框架内会hook所有pthread_mutex相关的调用，比如：
+```
+Mooner.startMutexMonitor("libmooner.so")
+```
 
 
 

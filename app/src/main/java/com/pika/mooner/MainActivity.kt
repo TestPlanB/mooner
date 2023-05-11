@@ -47,6 +47,13 @@ class MainActivity : AppCompatActivity() {
         binding.msponge.setOnClickListener {
             Mooner.initMSponge()
         }
+
+        // 开启监控销毁锁 传入需要监控的so名称
+        Mooner.startMutexMonitor("libmooner.so")
+        binding.destroyedMutexMonitor.setOnClickListener {
+            // 制造一个crash，查看log mooner
+            createDestroyedPthreadMutex()
+        }
     }
 
 
@@ -57,4 +64,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     external fun createThreadCrash()
+
+    // 测试锁释放后使用
+    external fun createDestroyedPthreadMutex()
 }

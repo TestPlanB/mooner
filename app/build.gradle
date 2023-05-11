@@ -10,7 +10,7 @@ android {
     defaultConfig {
         applicationId "com.pika.mooner"
         minSdk 23
-        targetSdk 29
+        targetSdk 30
         versionCode 1
         versionName "1.0"
 
@@ -38,6 +38,9 @@ android {
     }
     buildFeatures {
         viewBinding true
+    }
+    packagingOptions {
+        pickFirst '**/libxunwind.so'
     }
 }
 
