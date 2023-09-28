@@ -21,7 +21,7 @@ static map_t *concurrent_hash_map;
 extern const int check_is_destroy_mutex(pthread_mutex_t *mutex_interface);
 
 
-// 打印backtrace
+// 打印backtrace todo：可以通过jni传递到java层
 void print_back_trace(hook_entry *get_entry) {
     // 输出mutex 销毁时的backtrace
     __android_log_print(ANDROID_LOG_ERROR, "mooner", "destroyed mutex backtrace");
