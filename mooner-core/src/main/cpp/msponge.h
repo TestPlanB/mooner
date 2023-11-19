@@ -15,6 +15,8 @@ enum AllocatorType : char {
     kAllocatorTypeRegionTLAB,  // Use region pieces as TLABs. Default for most small objects. (*)
 };
 
+typedef void (*heap_record_free)(void *, uint64_t, int64_t);
+
 typedef void *(*los_alloc)(void *, void *, size_t, size_t *, size_t *, size_t *);
 
 typedef void *(*out_of_memory)(void *, void *, size_t, enum AllocatorType);

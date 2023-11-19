@@ -9,16 +9,18 @@ void *los_alloc_orig = NULL;
 void *alloc_internal_with_gc_orig = NULL;
 void *throw_out_of_memory_error_orig = NULL;
 void *stub = NULL;
-int64_t lastAllocLOS = 0;
+static uint64_t lastAllocLOS = 0;
 void *grow_for_utilization_orig = NULL;
 
-void* los = NULL;
+void *los = NULL;
+void *heap_record_free_orig = NULL;
+static volatile int start_handle_oom = 0;
 
 
 bool tryAgainAllocateInternalWithGc = false;
 bool findThrowOutOfMemoryError = false;
 
-uint64_t get_num_bytes_allocated(void * los){
+uint64_t get_num_bytes_allocated(void *los) {
     void *handle = shadowhook_dlopen("libart.so");
     void *func = shadowhook_dlsym(handle,
                                   "_ZN3art2gc5space16LargeObjectSpace17GetBytesAllocatedEv");
@@ -40,13 +42,13 @@ void *los_alloc_proxy(void *thiz, void *self, size_t num_bytes, size_t *bytes_al
     return largeObjectMap;
 }
 
-void call_record_free(void * heap,int64_t freeSize){
+void call_record_free(void *heap, int64_t freeSize) {
+    start_handle_oom = 1;
     //拦截并跳过本次OutOfMemory，并置标记位
     void *handle = shadowhook_dlopen("libart.so");
     void *func = shadowhook_dlsym(handle, "_ZN3art2gc4Heap10RecordFreeEml");
-    ((void (*)(void *, uint64_t, int64_t)) func)(heap, -1, freeSize);
+    ((heap_record_free) func)(heap, -1, freeSize);
 }
-
 
 
 void *allocate_internal_with_gc_proxy(void *heap, void *self,
@@ -81,17 +83,20 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
                                                                              bytes_tl_bulk_allocated,
                                                                              klass);
         // 再次重试后，依旧找不到合适的内存，就直接return，走原来的oom逻辑
-        if (object == NULL){
-            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "再次分配依旧找不到合适内存 return ");
+        if (object == NULL) {
+            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s",
+                                "再次分配依旧找不到合适内存 return ");
             return object;
         }
         // 如果当前heap 通过gc后释放了属于largeobjectspace 的空间，此时要进行heap补偿
-        if (los != NULL){
+        if (los != NULL) {
             uint64_t currentAllocLOS = get_num_bytes_allocated(los);
-            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu : %lu", "当前数值",currentAllocLOS, lastAllocLOS);
-            if (currentAllocLOS < lastAllocLOS){
-                call_record_free(heap,currentAllocLOS - lastAllocLOS);
-                __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu", "los进行补偿",currentAllocLOS - lastAllocLOS);
+            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu : %lu", "当前数值",
+                                currentAllocLOS, lastAllocLOS);
+            if (currentAllocLOS < lastAllocLOS) {
+                call_record_free(heap, currentAllocLOS - lastAllocLOS);
+                __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu", "los进行补偿",
+                                    currentAllocLOS - lastAllocLOS);
             }
         }
 
@@ -101,27 +106,27 @@ void *allocate_internal_with_gc_proxy(void *heap, void *self,
 }
 
 
-
 void throw_out_of_memory_error_proxy(void *heap, void *self, size_t byte_count,
                                      enum AllocatorType allocator_type) {
-    __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d,%d", "发生了oom ", pthread_gettid_np(pthread_self()), tryAgainAllocateInternalWithGc);
+    __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d,%d", "发生了oom ",
+                        pthread_gettid_np(pthread_self()), tryAgainAllocateInternalWithGc);
     // 发生了oom，把oom的标志位设置为true
     findThrowOutOfMemoryError = true;
     // 如果当前不是清除堆空间后再引发的oom，则进行堆清除，否则直接oom
     if (!tryAgainAllocateInternalWithGc) {
         __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s", "发生了oom，进行gc拦截");
 
-        if (los != NULL){
+        if (los != NULL) {
             uint64_t currentAlloc = get_num_bytes_allocated(los);
             // 需要考虑多次触发oom的情况，如果当前进行了堆删减，才会进行补偿，否则要把lastAllocLOS设置为0避免产生大额补偿
-            if (currentAlloc > lastAllocLOS){
-                call_record_free(heap,currentAlloc - lastAllocLOS);
-                __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d", "本次增量:",currentAlloc - lastAllocLOS);
+            if (currentAlloc > lastAllocLOS) {
+                call_record_free(heap, currentAlloc - lastAllocLOS);
+                __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s,%d", "本次增量:",
+                                    currentAlloc - lastAllocLOS);
                 lastAllocLOS = currentAlloc;
                 return;
-            } else{
-                lastAllocLOS = 0;
             }
+            lastAllocLOS = 0;
         }
 
     }
@@ -130,6 +135,20 @@ void throw_out_of_memory_error_proxy(void *heap, void *self, size_t byte_count,
     // 这里要设置成fasle，因为throw_out_of_memory_error方法会多次再尝试gc，避免多次走到重新尝试分配流程
     findThrowOutOfMemoryError = false;
     ((out_of_memory) throw_out_of_memory_error_orig)(heap, self, byte_count, allocator_type);
+}
+
+void heap_record_free_proxy(void *heap, uint64_t freed_objects, int64_t freed_bytes) {
+    ((heap_record_free) heap_record_free_orig)(heap, freed_objects, freed_bytes);
+    if (los != NULL && start_handle_oom == 1) {
+        uint64_t currentAllocLOS = get_num_bytes_allocated(los);
+        if (currentAllocLOS < lastAllocLOS) {
+            ((heap_record_free) heap_record_free_orig)(heap, freed_objects,
+                                                    currentAllocLOS -
+                                                    lastAllocLOS);
+            __android_log_print(ANDROID_LOG_ERROR, MSPONGE_TAG, "%s %lu", "los进行补偿",
+                                currentAllocLOS - lastAllocLOS);
+        }
+    }
 }
 
 
@@ -167,6 +186,13 @@ Java_com_pika_mooner_1core_Mooner_memorySponge(JNIEnv *env, jobject thiz) {
             "_ZN3art2gc4Heap18GrowForUtilizationEPNS0_9collector16GarbageCollectorEm",
             (void *) grow_for_utilization_proxy,
             (void **) &grow_for_utilization_orig);
+
+
+    shadowhook_hook_sym_name(
+            "libart.so",
+            "_ZN3art2gc4Heap10RecordFreeEml",
+            (void *) heap_record_free_proxy,
+            (void **) &heap_record_free_orig);
 
 
     int error_num = shadowhook_get_errno();
