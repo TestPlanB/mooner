@@ -60,5 +60,5 @@
         android:text="监控destroyed mutex"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/oom_alloc_small"/>
+        app:layout_constraintTop_toBottomOf="@+id/msponge"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
